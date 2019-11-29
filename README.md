@@ -7,5 +7,5 @@ A Docker image of LemonBench.
 ## Quick Start
 
 ```bash
-docker run --rm yaleh/lemonbench
+docker run --rm yaleh/lemonbench -f
 ```
