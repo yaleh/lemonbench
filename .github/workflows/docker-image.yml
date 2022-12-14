@@ -74,6 +74,10 @@ jobs:
         arch: armv7
         distro: ubuntu22.04
         githubToken: ${{ github.token }}
+        install: |
+          apt-get update
+          apt-get install -y curl
+          curl -fsSL https://get.docker.com | sh
         run: docker build . --file Dockerfile --tag yaleh/lemonbench
     # - name: Push the tagged Docker image
     #   run: docker push yaleh/lemonbench:${{steps.vars.outputs.tag}}
