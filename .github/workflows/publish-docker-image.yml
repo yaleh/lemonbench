@@ -1,0 +1,89 @@
+name: Publish Docker Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  publish:
+
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
+
+    steps:
+    - name: Download artifact
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        # Required, workflow file name or ID
+        workflow: docker-image.yml
+        # Optional, the status or conclusion of a completed workflow to search for
+        # Can be one of a workflow conclusion:
+        #   "failure", "success", "neutral", "cancelled", "skipped", "timed_out", "action_required"
+        # Or a workflow status:
+        #   "completed", "in_progress", "queued"
+        # workflow_conclusion: success
+        # Optional, will get head commit SHA
+        # pr: ${{github.event.pull_request.number}}
+        # Optional, no need to specify if PR is
+        # commit: ${{github.event.pull_request.head.sha}}
+        # Optional, will use the branch
+        # branch: master
+        # Optional, defaults to all types
+        # event: push
+        # Optional, will use specified workflow run
+        # run_id: 1122334455
+        # Optional, run number from the workflow
+        # run_number: 34
+        # Optional, uploaded artifact name,
+        # will download all artifacts if not specified
+        # and extract them in respective subdirectories
+        # https://github.com/actions/download-artifact#download-all-artifacts
+        name: docker-images
+        # Optional, directory where to extract artifact. Defaults to the artifact name (see `name` input)
+        path: ./
+        # Optional, defaults to current repo
+        # repo: ${{github.repository}}
+        # Optional, check the workflow run whether it has an artifact
+        # then will get the last available artifact from previous workflow
+        # default false, just try to download from the last one
+        # check_artifacts:  false
+        # Optional, search for the last workflow run whose stored an artifact named as in `name` input
+        # default false
+        # search_artifacts: false
+    - name: Get the version
+      id: vars
+      run: echo "tag=$(date +%s)" >> $GITHUB_OUTPUT
+    - name: Build branch name
+      shell: bash
+      run: |
+        [[ $GITHUB_REF_NAME = "master" ]] && TAG="latest" || TAG=$GITHUB_REF_NAME
+        echo "branch=$TAG" >> $GITHUB_OUTPUT
+      id: branch_name
+    - name: Show the downloaded files
+      shell: bash
+      run: ls -al
+      id: ls_files
+    - name: Load Docker image
+      shell: bash
+      run: docker load --input lemonbench.tar.gz
+    - name: Retag Docker image
+      shell: bash
+      run: |
+        docker tag yaleh/lemonbench yaleh/lemonbench:${{steps.vars.outputs.tag}}
+        docker tag yaleh/lemonbench yaleh/lemonbench:${{steps.branch_name.outputs.branch}}
+    - name: Login to DockerHub Registry
+      run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+    - name: Publish Docker images
+      shell: bash
+      run: |
+        docker push yaleh/lemonbench:${{steps.vars.outputs.tag}}
+        docker push yaleh/lemonbench:${{steps.branch_name.outputs.branch}}
+    # Docker hub README can only be updated with password, not token.
+    # - uses: actions/checkout@v2
+    # - name: Docker Hub Description
+    #   if: ${{ env.GITHUB_REF_NAME }} == 'master' }}
+    #   uses: peter-evans/dockerhub-description@v2
+    #   with:
+    #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+    #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+    #     repository: yaleh/lemonbench

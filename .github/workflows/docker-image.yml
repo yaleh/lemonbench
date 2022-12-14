@@ -1,0 +1,51 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+  pull_request:
+    branches:
+      - 'master'
+      - 'develop'
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Login to DockerHub Registry
+      run: echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+    - name: Get the version
+      id: vars
+      run: echo "tag=$(date +%s)" >> $GITHUB_OUTPUT
+    - name: Build branch name
+      shell: bash
+      run: |
+        [[ $GITHUB_REF_NAME = "master" ]] && TAG="latest" || TAG=$GITHUB_REF_NAME
+        echo "branch=$TAG" >> $GITHUB_OUTPUT
+      id: branch_name
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag yaleh/lemonbench
+    # - name: Push the tagged Docker image
+    #   run: docker push yaleh/lemonbench:${{steps.vars.outputs.tag}}
+    - name: Save the tagged Docker image
+      run: docker save -o lemonbench.tar.gz yaleh/lemonbench
+    - name: Upload the saved tagged Docker image
+      uses: actions/upload-artifact@v2
+      with:
+        name: docker-images
+        path: lemonbench.tar.gz
+    # - name: Tag the image as the branch one
+    #   run: docker tag yaleh/lemonbench:${{steps.vars.outputs.tag}} yaleh/lemonbench:${{steps.branch_name.outputs.branch}}
+    # - name: Build the branch Docker image
+    #   run: docker build . --file Dockerfile --tag yaleh/lemonbench:${{steps.branch_name.outputs.branch}}
+    # - name: Push the tagged branch Docker image
+    #   run: docker push yaleh/lemonbench:${{steps.branch_name.outputs.branch}}
+    
