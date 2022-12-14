@@ -72,7 +72,7 @@ jobs:
       name: Build the Docker image
       with:
         arch: armv7
-        distro: ubuntu-latest
+        distro: ubuntu22.04
         githubToken: ${{ github.token }}
         run: docker build . --file Dockerfile --tag yaleh/lemonbench
     # - name: Push the tagged Docker image
